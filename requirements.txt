@@ -5,3 +5,25 @@ openai
 tweepy
 tavily-python
 openai
+langchain
+# Core dependencies
+streamlit
+pandas
+numpy
+
+# Database
+supabase
+psycopg2-binary
+
+
+
+# Data processing and visualization
+plotly
+matplotlib
+
+# Date/time handling
+pytz
+
+# Utilities
+requests
+pydantic

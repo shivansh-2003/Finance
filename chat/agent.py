@@ -1,14 +1,23 @@
+import os
+from dotenv import load_dotenv
 from agno.agent import Agent
 from agno.models.openai import OpenAIChat
 from agno.tools.duckduckgo import DuckDuckGoTools
 from agno.tools.yfinance import YFinanceTools
+from agno.tools.x import XTools
+
+load_dotenv()
+
+YAHOO_FINANCE_KEY = os.getenv("YAHOO_FINANCE_KEY")
+TAVILY_KEY = os.getenv("TAVILY_KEY")
+CLAUDE_KEY = os.getenv("CLAUDE_KEY")
 
 # 🔹 Web Agent - Fetches financial news & insights
 web_agent = Agent(
     name="Web Agent",
     role="Search the web for financial news and trends",
     model=OpenAIChat(id="gpt-4o"),
-    tools=[DuckDuckGoTools()],
+    tools=[DuckDuckGoTools(),TavilyTools(api_key=TAVILY_KEY, search=True, search_depth="advanced", format="markdown")],
     instructions="Always include sources and recent updates",
     show_tool_calls=True,
     markdown=True,
