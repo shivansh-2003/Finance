@@ -1,0 +1,7 @@
+agno
+yfinance
+python-dotenv
+openai
+tweepy
+tavily-python
+openai
