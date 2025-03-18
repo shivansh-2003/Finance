@@ -288,7 +288,7 @@ elif st.session_state.page == "expense tracking":
                 
                 if expense_details:
                     # Add expense to database
-                    result = expense_tracker.add_expense(expense_details)
+                    result = expense_tracker.process_expense_input(user_input)
                     
                     if result["success"]:
                         response = f"Got it! I've recorded ${expense_details['amount']:.2f} for {expense_details['description']} in the {expense_details['category']} category on {expense_details['date']}."
@@ -301,7 +301,7 @@ elif st.session_state.page == "expense tracking":
                 st.session_state.chat_history.append({"role": "assistant", "content": response})
                 
                 # Clear input field
-                st.experimental_rerun()
+                st.stop()  # Stop execution
         
         st.markdown('</div>', unsafe_allow_html=True)
         
@@ -336,7 +336,7 @@ elif st.session_state.page == "expense tracking":
             }
             
             # Add to database
-            result = expense_tracker.add_expense(expense_data)
+            result = expense_tracker.process_expense_input(f"I spent ${amount} on {description} on {date.strftime('%Y-%m-%d')}")
             
             if result["success"]:
                 st.success(f"Added {UIHelper.format_currency(amount)} expense for {category}")

@@ -1,8 +1,9 @@
 import os
 from database import DatabaseManager
 from nlp_processor import NLPProcessor
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import pandas as pd
+from dateutil import parser  # Import the parser from dateutil
 
 class GoalManager:
     def __init__(self):
@@ -66,36 +67,61 @@ class GoalManager:
         goal = self.db.get_goal_by_id(goal_id)
         
         if not goal:
-            return {"success": False, "message": f"Goal with ID {goal_id} not found"}
+            return {"success": False, "message": "Goal not found."}
         
-        deadline = datetime.fromisoformat(goal["deadline"].replace("Z", "+00:00"))
-        now = datetime.now()
+        # Debugging: Print the raw deadline string
+        print(f"Raw Deadline String: {goal['deadline']}")
         
-        # Calculate time remaining
-        days_remaining = (deadline - now).days
-        start_date = datetime.fromisoformat(goal["created_at"].replace("Z", "+00:00"))
-        total_days = (deadline - start_date).days
-        
-        # Calculate progress percentage
-        progress_percentage = (goal["current_amount"] / goal["target_amount"]) * 100
-        
+        # Use dateutil.parser to parse the deadline
+        try:
+            deadline = parser.isoparse(goal["deadline"])  # This will handle the timezone correctly
+        except Exception as e:
+            print(f"Error parsing deadline: {e}")
+            raise ValueError("Failed to parse deadline.")
+
+        # Debugging: Print the parsed deadline
+        print(f"Parsed Deadline: {deadline}, Timezone: {deadline.tzinfo}")
+
+        # If the deadline is still naive, force it to be UTC
+        if deadline.tzinfo is None:
+            print("Deadline is offset-naive, setting to UTC.")
+            deadline = deadline.replace(tzinfo=timezone.utc)
+
+        # Get the current time as an offset-aware datetime
+        start_date = datetime.now(timezone.utc)  # Set timezone to UTC directly
+
+        # Debugging: Print the start date
+        print(f"Start Date: {start_date}, Timezone: {start_date.tzinfo}")
+
+        # Calculate days remaining
+        days_remaining = (deadline - start_date).days
+
+        # Calculate total days for the goal duration
+        total_days = (deadline - parser.isoparse(goal["created_at"])).days  # Assuming goal["created_at"] is in ISO format
+
         # Calculate time percentage
-        time_percentage = ((now - start_date).days / total_days * 100) if total_days > 0 else 100
-        
-        # Calculate required monthly savings to reach goal
-        months_remaining = max(days_remaining / 30, 0.1)  # Avoid division by zero
-        required_monthly = (goal["target_amount"] - goal["current_amount"]) / months_remaining
-        
-        return {
+        time_percentage = ((total_days - days_remaining) / total_days * 100) if total_days > 0 else 0
+
+        # Calculate required monthly savings
+        if total_days > 0:
+            remaining_amount = goal["target_amount"] - goal["current_amount"]
+            months_remaining = (days_remaining // 30) + (1 if days_remaining % 30 > 0 else 0)  # Round up to the next month
+            required_monthly = remaining_amount / months_remaining if months_remaining > 0 else 0
+        else:
+            required_monthly = 0
+
+        # Prepare the progress dictionary
+        progress = {
             "success": True,
-            "goal": goal,
+            "progress_percentage": (goal["current_amount"] / goal["target_amount"]) * 100 if goal["target_amount"] > 0 else 0,
             "days_remaining": days_remaining,
-            "total_days": total_days,
-            "months_remaining": months_remaining,
-            "progress_percentage": progress_percentage,
-            "time_percentage": time_percentage,
-            "required_monthly": required_monthly
+            "time_percentage": time_percentage,  # Include time percentage
+            "total_days": total_days,  # Include total days
+            "required_monthly": required_monthly,  # Include required monthly savings
+            "goal": goal  # Include the goal details if needed
         }
+
+        return progress
     
     def calculate_goal_feasibility(self, goal_id, monthly_income=None, monthly_expenses=None):
         """Calculate if a goal is feasible based on current income and expenses"""

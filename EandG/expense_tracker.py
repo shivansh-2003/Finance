@@ -13,21 +13,24 @@ class ExpenseTracker:
         """Process natural language expense input"""
         expense_details = self.nlp.extract_expense_details(user_input)
         
-        if not expense_details:
+        # Debugging: Print the extracted details
+        print(f"Extracted expense details: {expense_details}")
+        
+        if not expense_details or 'Amount' not in expense_details:
             return {"success": False, "message": "Could not extract expense details. Please try again."}
         
         # Add expense to database
         result = self.db.add_expense(
-            amount=expense_details["amount"],
-            category=expense_details["category"],
-            date=expense_details["date"],
-            description=expense_details["description"]
+            amount=expense_details["Amount"],
+            category=expense_details["Category"],
+            date=expense_details["Date"],
+            description=expense_details["Description"]
         )
         
         if result:
             return {
                 "success": True,
-                "message": f"Expense added: ${expense_details['amount']} for {expense_details['description']} in category {expense_details['category']}",
+                "message": f"Expense added: ${expense_details['Amount']} for {expense_details['Description']} in category {expense_details['Category']}",
                 "details": expense_details
             }
         else:

@@ -160,3 +160,22 @@ class ColorPalette:
         """Get color for a specific category"""
         category = category.lower() if isinstance(category, str) else "other"
         return cls.category_colors.get(category, "#95a5a6")
+
+    @staticmethod
+    def get_category_color(category):
+        color_map = {
+            "Groceries": "#FF9999",
+            "Dining": "#66B3FF",
+            "Entertainment": "#99FF99",
+            "Utilities": "#FFCC99",
+            "Transport": "#FFD700",
+            "Housing": "#FF4500",
+            "Healthcare": "#8A2BE2",
+            "Shopping": "#FF69B4",
+            "Education": "#20B2AA",
+            "Travel": "#FF6347",
+            "Subscriptions": "#7B68EE",
+            "Personal": "#FF8C00",
+            "Other": "#D3D3D3"
+        }
+        return color_map.get(category, "#D3D3D3")  # Default color for unknown categories

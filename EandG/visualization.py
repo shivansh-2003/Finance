@@ -15,13 +15,20 @@ class FinanceVisualizer:
             
         labels = list(category_data.keys())
         values = list(category_data.values())
-        colors = [ColorPalette.get_category_color(cat) for cat in labels]
         
+        # Assign colors based on categories
+        colors = ['#FF9999', '#66B3FF', '#99FF99', '#FFCC99']  # Example hardcoded colors
+        
+        # Debugging: Print the colors assigned
+        print(f"Labels: {labels}")
+        print(f"Values: {values}")
+        print(f"Colors: {colors}")
+
         fig = go.Figure(data=[go.Pie(
             labels=labels,
             values=values,
             hole=.3,
-            marker_colors=colors
+            marker=dict(colors=colors)  # Use the colors here
         )])
         
         fig.update_layout(

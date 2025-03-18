@@ -12,21 +12,15 @@ class NLPProcessor:
     def extract_expense_details(self, user_input):
         """Extract expense details from natural language input"""
         prompt = f"""
-        Extract the following details from this expense description:
+        Please extract the following details from the expense description and return the result as a JSON object:
         - Amount (in dollars)
-        - Category (e.g., groceries, dining, entertainment, utilities, transport)
-        - Date (if not specified, assume today)
-        - Description (brief summary of the expense)
+        - Category (e.g., groceries, dining, entertainment)
+        - Date (format: YYYY-MM-DD)
+        - Description (a brief summary of the expense)
+        
+        Example: "I spent $50 on groceries yesterday."
         
         User input: "{user_input}"
-        
-        Return the result as a JSON object with the following structure:
-        {{
-            "amount": float,
-            "category": string,
-            "date": string (YYYY-MM-DD format),
-            "description": string
-        }}
         """
         
         try:
@@ -36,7 +30,18 @@ class NLPProcessor:
                 response_format={"type": "json_object"}
             )
             
+            # Debugging: Print the raw response
+            print(f"Raw response: {response}")  # Add this line
+            
+            # Check if the response is valid
+            if not response.choices or not response.choices[0].message.content:
+                print("No valid response from the model.")
+                return None
+            
             result = json.loads(response.choices[0].message.content)
+            
+            # Debugging: Print the extracted result
+            print(f"Extracted result: {result}")  # Add this line
             
             # Default to today if date is not specified
             if "date" not in result or not result["date"]:
@@ -104,3 +109,38 @@ class NLPProcessor:
         except Exception as e:
             print(f"Error extracting goal details: {e}")
             return None
+
+# Test code
+if __name__ == "__main__":
+    # Create an instance of NLPProcessor
+    nlp = NLPProcessor()
+    
+    # Test inputs
+    test_inputs = [
+        "I spent $50 on groceries yesterday.",
+        "Bought a new shirt for $30 on 2023-10-01.",
+        "Dinner cost me $45 last night.",
+        "I paid $100 for utilities this month."
+    ]
+
+    # Test expense extraction
+    print("\nTesting expense extraction:")
+    print("-" * 50)
+    for input_str in test_inputs:
+        result = nlp.extract_expense_details(input_str)
+        print(f"\nInput: {input_str}")
+        print(f"Result: {result}")
+    
+    # Test goal extraction
+    print("\nTesting goal extraction:")
+    print("-" * 50)
+    goal_inputs = [
+        "I want to save $5000 for a vacation by December 2024",
+        "Need to save $10000 for a car down payment by June",
+        "Save $2000 for emergency fund by the end of this year"
+    ]
+    
+    for input_str in goal_inputs:
+        result = nlp.extract_goal_details(input_str)
+        print(f"\nInput: {input_str}")
+        print(f"Result: {result}")
