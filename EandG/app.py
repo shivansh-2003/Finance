@@ -925,6 +925,24 @@ elif st.session_state.page == "settings":
             # This would need additional confirmation and logic
             st.error("Please contact support to delete your data.")
 
+# Weekly Insights Page
+elif st.session_state.page == "weekly insights":
+    st.markdown('<h1 class="main-header">Weekly Insights</h1>', unsafe_allow_html=True)
+    
+    # Get current date
+    now = datetime.now()
+    current_year = now.year
+    current_week = now.isocalendar()[1]
+    
+    # Generate weekly insights
+    with st.spinner("Generating weekly insights..."):
+        insights = ai_insight_generator.generate_weekly_summary(current_year, current_week)
+        
+        if insights["success"]:
+            st.markdown(insights["summary"])
+        else:
+            st.error(insights["message"])
+
 # Add footer
 st.markdown("""
 <div style='position: fixed; bottom: 0; width: 100%; background-color: #f8f9fa; padding: 10px; text-align: center;'>

@@ -197,3 +197,81 @@ class AIInsightGenerator:
                 "message": f"Could not generate goal suggestions. Error: {str(e)}",
                 "data": goal_data
             }
+
+    def generate_weekly_summary(self, year=None, week=None):
+        """Generate conversational weekly summary with insights"""
+        if year is None or week is None:
+            now = datetime.now()
+            year = now.year
+            week = now.isocalendar()[1]  # Get current week number
+        
+        week_start = datetime.fromisocalendar(year, week, 1)  # Get the start of the week
+        week_end = week_start + timedelta(days=6)  # Get the end of the week
+        week_name = f"Week {week} of {year}"
+        expenses = self.db.get_weekly_expenses(year, week)  # Adjusted to fetch weekly expenses
+        
+        if not expenses:
+            return {
+                "success": True,
+                "message": f"No expenses found for {week_name}. Start tracking your expenses to get insights.",
+                "summary": f"No expenses found for {week_name}."
+            }
+        
+        # Convert to DataFrame for analysis
+        df = pd.DataFrame(expenses)
+        total_spent = df["amount"].sum()
+        category_totals = df.groupby("category")["amount"].sum().to_dict()
+        
+        # Prepare data for Claude
+        expense_data = {
+            "current_week": week_name,
+            "total_spent": total_spent,
+            "categories": {
+                category: {
+                    "amount": amount,
+                    "percent_of_total": (amount / total_spent) * 100
+                }
+                for category, amount in category_totals.items()
+            }
+        }
+        
+        # Generate insights with Claude
+        prompt = f"""
+        As a personal finance assistant, analyze the following weekly expense data and provide insights in a conversational tone.
+        Highlight notable changes, patterns, and suggest actionable advice for the user.
+        
+        Expense data: {json.dumps(expense_data, indent=2)}
+        
+        Your response should include:
+        1. A summary of overall spending for {week_name}
+        2. Analysis of spending by category
+        3. At least 2-3 specific, actionable insights or suggestions
+        4. A positive, encouraging tone
+        
+        Keep your response concise (200-300 words) and conversational.
+        """
+        
+        try:
+            response = self.anthropic_client.messages.create(
+                model=self.model,
+                max_tokens=1000,
+                messages=[
+                    {"role": "user", "content": prompt}
+                ]
+            )
+            
+            summary = response.content[0].text
+            
+            return {
+                "success": True,
+                "message": "Generated weekly summary with AI insights",
+                "summary": summary,
+                "data": expense_data
+            }
+        except Exception as e:
+            print(f"Error generating weekly summary: {e}")
+            return {
+                "success": False, 
+                "message": f"Could not generate weekly summary. Error: {str(e)}",
+                "data": expense_data
+            }

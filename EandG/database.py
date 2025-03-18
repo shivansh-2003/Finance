@@ -2,7 +2,7 @@ import os
 from supabase import create_client, Client
 from dotenv import load_dotenv
 import pandas as pd
-from datetime import datetime
+from datetime import datetime, timedelta
 
 load_dotenv()
 
@@ -128,3 +128,13 @@ class DatabaseManager:
         if response.data:
             return response.data[0]
         return None
+
+    def get_weekly_expenses(self, year, week):
+        """Get expenses for a specific week"""
+        start_date = datetime.fromisocalendar(year, week, 1).strftime("%Y-%m-%d")
+        end_date = (datetime.fromisocalendar(year, week, 1) + timedelta(days=6)).strftime("%Y-%m-%d")
+        
+        query = self.supabase.table("expenses").select("*").gte("date", start_date).lte("date", end_date)
+        response = query.execute()
+        
+        return response.data if response.data else []
