@@ -2,91 +2,92 @@ import plotly.graph_objects as go
 import plotly.express as px
 import pandas as pd
 from datetime import datetime
+from utils import ColorPalette
 
 class FinanceVisualizer:
     def __init__(self):
         self.colors = px.colors.qualitative.Plotly
     
-    def create_category_pie_chart(self, category_amounts):
-        """Create a pie chart of expenses by category"""
-        if not category_amounts:
+    def create_category_pie_chart(self, category_data):
+        """Create a pie chart showing expense distribution by category"""
+        if not category_data:
             return None
-        
-        labels = list(category_amounts.keys())
-        values = list(category_amounts.values())
+            
+        labels = list(category_data.keys())
+        values = list(category_data.values())
+        colors = [ColorPalette.get_category_color(cat) for cat in labels]
         
         fig = go.Figure(data=[go.Pie(
             labels=labels,
             values=values,
-            hole=0.4,
-            textinfo='label+percent',
-            insidetextorientation='radial',
-            marker=dict(colors=self.colors[:len(labels)])
+            hole=.3,
+            marker_colors=colors
         )])
         
         fig.update_layout(
             title="Expenses by Category",
-            height=500,
-            margin=dict(l=20, r=20, t=40, b=20)
+            showlegend=True,
+            template="plotly_white"
         )
         
         return fig
     
-    def create_monthly_trend_chart(self, monthly_data):
-        """Create a line chart of spending trends over time"""
-        if not monthly_data:
+    def create_monthly_trend_chart(self, data):
+        """Create a line chart showing monthly spending trends"""
+        if not data:
             return None
+            
+        df = pd.DataFrame(data)
         
-        df = pd.DataFrame(monthly_data)
-        
-        fig = px.line(
-            df, 
-            x="month", 
-            y="total", 
-            markers=True,
-            title="Monthly Spending Trend",
-            labels={"month": "Month", "total": "Total Spending ($)"}
-        )
+        fig = go.Figure()
+        fig.add_trace(go.Scatter(
+            x=df["month"],
+            y=df["total"],
+            mode='lines+markers',
+            name='Total Spent',
+            line=dict(color=ColorPalette.primary, width=2),
+            marker=dict(size=8)
+        ))
         
         fig.update_layout(
-            height=400,
-            margin=dict(l=20, r=20, t=40, b=20),
-            xaxis=dict(tickangle=45)
+            title="Monthly Spending Trend",
+            xaxis_title="Month",
+            yaxis_title="Amount ($)",
+            showlegend=True,
+            template="plotly_white"
         )
         
         return fig
     
     def create_category_trend_chart(self, category_trends, categories=None):
-        """Create a line chart of spending trends by category"""
+        """Create a line chart showing spending trends by category"""
         if not category_trends:
             return None
+            
+        fig = go.Figure()
         
-        # If categories is None, use all categories
-        if categories is None:
-            categories = list(category_trends.keys())
-        else:
-            # Filter to only include specified categories
-            category_trends = {k: v for k, v in category_trends.items() if k in categories}
-        
-        # Prepare data for plotting
-        all_data = []
         for category, data in category_trends.items():
-            for point in data:
-                all_data.append({
-                    "month": point["month"],
-                    "amount": point["amount"],
-                    "category": category
-                })
+            if categories and category not in categories:
+                continue
+                
+            df = pd.DataFrame(data)
+            color = ColorPalette.get_category_color(category)
+            
+            fig.add_trace(go.Scatter(
+                x=df["month"],
+                y=df["amount"],
+                mode='lines+markers',
+                name=category.title(),
+                line=dict(color=color, width=2),
+                marker=dict(size=6)
+            ))
         
-        df = pd.DataFrame(all_data)
-        
-        fig = px.line(
-            df,
-            x="month",
-            y="amount",
-            color="category",
-            markers=True,
-            title="Spending Trends by Category",
-            labels={"month": "Month", "amount": "Amount ($)", "category": "Category"}
+        fig.update_layout(
+            title="Category Spending Trends",
+            xaxis_title="Month",
+            yaxis_title="Amount ($)",
+            showlegend=True,
+            template="plotly_white"
         )
         
+        return fig

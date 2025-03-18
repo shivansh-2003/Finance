@@ -57,6 +57,10 @@ class GoalManager:
         goals = self.db.get_goals(status="active")
         return goals
     
+    def get_all_goals(self):
+        """Get all goals regardless of status"""
+        return self.db.get_goals()
+    
     def get_goal_progress(self, goal_id):
         """Get the progress of a specific goal"""
         goal = self.db.get_goal_by_id(goal_id)
@@ -69,9 +73,14 @@ class GoalManager:
         
         # Calculate time remaining
         days_remaining = (deadline - now).days
+        start_date = datetime.fromisoformat(goal["created_at"].replace("Z", "+00:00"))
+        total_days = (deadline - start_date).days
         
         # Calculate progress percentage
         progress_percentage = (goal["current_amount"] / goal["target_amount"]) * 100
+        
+        # Calculate time percentage
+        time_percentage = ((now - start_date).days / total_days * 100) if total_days > 0 else 100
         
         # Calculate required monthly savings to reach goal
         months_remaining = max(days_remaining / 30, 0.1)  # Avoid division by zero
@@ -81,8 +90,10 @@ class GoalManager:
             "success": True,
             "goal": goal,
             "days_remaining": days_remaining,
+            "total_days": total_days,
             "months_remaining": months_remaining,
             "progress_percentage": progress_percentage,
+            "time_percentage": time_percentage,
             "required_monthly": required_monthly
         }
     

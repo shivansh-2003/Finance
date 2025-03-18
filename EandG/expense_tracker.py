@@ -153,3 +153,59 @@ class ExpenseTracker:
             "monthly_totals": monthly_totals,
             "category_trends": monthly_categories
         }
+
+    def get_expenses_by_month(self, year, month):
+        """Get expenses for a specific month"""
+        return self.db.get_monthly_expenses(year, month)
+        
+    def get_analytics(self, start_date, end_date):
+        """Get analytics for a date range"""
+        expenses = self.db.get_expenses(start_date=start_date, end_date=end_date)
+        
+        if not expenses:
+            return {
+                "success": True,
+                "message": "No expenses found for the selected period",
+                "total_spent": 0,
+                "average_monthly": 0,
+                "highest_month": {"month": None, "amount": 0},
+                "monthly_trend": [],
+                "category_breakdown": {}
+            }
+        
+        df = pd.DataFrame(expenses)
+        
+        # Calculate total spent
+        total_spent = df["amount"].sum()
+        
+        # Group by month and calculate monthly totals
+        df["month"] = pd.to_datetime(df["date"]).dt.strftime("%b %Y")
+        monthly_totals = df.groupby("month")["amount"].sum()
+        
+        # Calculate average monthly spending
+        num_months = len(monthly_totals)
+        average_monthly = total_spent / num_months if num_months > 0 else 0
+        
+        # Find highest spending month
+        highest_month = {
+            "month": monthly_totals.idxmax() if not monthly_totals.empty else None,
+            "amount": monthly_totals.max() if not monthly_totals.empty else 0
+        }
+        
+        # Create monthly trend data
+        monthly_trend = [
+            {"month": month, "total": amount}
+            for month, amount in monthly_totals.items()
+        ]
+        
+        # Calculate category breakdown
+        category_breakdown = df.groupby("category")["amount"].sum().to_dict()
+        
+        return {
+            "success": True,
+            "total_spent": total_spent,
+            "average_monthly": average_monthly,
+            "highest_month": highest_month,
+            "monthly_trend": monthly_trend,
+            "category_breakdown": category_breakdown
+        }
