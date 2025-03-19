@@ -6,16 +6,19 @@ tweepy
 tavily-python
 openai
 langchain
+langchain-openai
+langchain-core
+langchain-community
+
+
 # Core dependencies
 streamlit
 pandas
 numpy
-
+pypdf
 # Database
 supabase
 psycopg2-binary
-
-
 
 # Data processing and visualization
 plotly
@@ -27,3 +30,5 @@ pytz
 # Utilities
 requests
 pydantic
+fastapi 
+uvicorn
