@@ -1,34 +1,43 @@
-agno
-yfinance
-python-dotenv
-openai
-tweepy
-tavily-python
-openai
-langchain
-langchain-openai
-langchain-core
-langchain-community
-
-
 # Core dependencies
-streamlit
-pandas
-numpy
-pypdf
+python-dotenv>=1.0.0
+openai>=1.0.0
+langchain>=0.0.335
+langchain-openai>=0.0.2
+langchain-core>=0.1.15
+langchain-community>=0.0.17
+langgraph>=0.0.17
+anthropic>=0.5.0
+supabase>=1.0.4
+
+# API and server
+fastapi>=0.100.0
+uvicorn>=0.23.0
+pydantic>=2.0.0
+
+# Data processing
+pandas>=2.0.0
+numpy>=1.24.0
+
+# PDF processing
+pypdf>=3.16.0
+
 # Database
-supabase
-psycopg2-binary
+psycopg2-binary>=2.9.5
 
-# Data processing and visualization
-plotly
-matplotlib
-
-# Date/time handling
-pytz
+# Data visualization
+plotly>=5.14.0
+matplotlib>=3.7.0
 
 # Utilities
-requests
-pydantic
-fastapi 
-uvicorn
+requests>=2.29.0
+tqdm>=4.65.0
+pytz>=2023.3
+
+# For formatting
+black>=23.3.0
+
+# Additional dependencies
+agno
+yfinance
+tweepy
+tavily-python
