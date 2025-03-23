@@ -3,7 +3,7 @@
 
 import os
 from typing import List, Dict, Any
-from langchain.chat_models import ChatAnthropic
+from langchain_openai import ChatOpenAI
 from langchain.embeddings import OpenAIEmbeddings
 from langchain.vectorstores import SupabaseVectorStore
 from langchain.tools import TavilySearchResults
@@ -17,27 +17,36 @@ from langchain.prompts import ChatPromptTemplate
 from langchain.pydantic_v1 import BaseModel, Field
 from dotenv import load_dotenv
 from datetime import datetime
+from supabase import create_client, Client  # Import the necessary Supabase client
 
 load_dotenv()
 
 # Environment setup (would use dotenv in production)
-os.environ["ANTHROPIC_API_KEY"] = "your-anthropic-api-key"
-os.environ["OPENAI_API_KEY"] = "your-openai-api-key"  # For embeddings
-os.environ["SUPABASE_URL"] = "your-supabase-url"
-os.environ["SUPABASE_SERVICE_KEY"] = "your-supabase-key"
-os.environ["TAVILY_API_KEY"] = "your-tavily-api-key"
 
-# Initialize LLM
-llm = ChatAnthropic(model="claude-3-sonnet-20240229", temperature=0.2)
+OPENAI_API_KEY=os.environ["OPENAI_API_KEY"] 
+SUPABASE_URL=os.environ["SUPABASE_URL"]
+SUPABASE_KEY=os.environ["SUPABASE_KEY"]
+TAVILY_API_KEY=os.environ["TAVILY_API_KEY"]
+
+# Initialize Supabase client
+supabase_url = os.getenv("SUPABASE_URL")
+supabase_key = os.getenv("SUPABASE_KEY")
+supabase_client: Client = create_client(supabase_url, supabase_key)
+
+# Initialize LLM with appropriate parameters
+llm = ChatOpenAI(
+    model="gpt-4-turbo",  # Changed to GPT-4 Turbo
+    temperature=0.2,
+    max_tokens=1500,  # Increased token limit for more comprehensive responses
+)
 
 # Initialize embeddings
 embeddings = OpenAIEmbeddings()
 
 # Establish connection to Supabase Vector DB
 vector_store = SupabaseVectorStore(
+    client=supabase_client,  # Pass the Supabase client
     embedding=embeddings,
-    client_url=os.environ.get("SUPABASE_URL"),
-    client_key=os.environ.get("SUPABASE_SERVICE_KEY"),
     table_name="documents"
 )
 
@@ -539,25 +548,28 @@ def generate_custom_assessment(topic):
     """Generate a custom assessment on a user-chosen topic"""
     return assessment_agent.generate_custom_assessment(topic)
 
-# API routes would be implemented here 
-# (using FastAPI, Flask, etc.)
-"""
-@app.get("/curriculum")
-def get_curriculum():
-    return curriculum
-
-@app.get("/topic/{level}/{week}")
-def get_topic(level: int, week: int, subtopic: str = None):
-    return get_topic_content(level, week, subtopic)
-
-@app.get("/assessment/{level}/{week}")
-def get_assessment(level: int, week: int, subtopic: str = None):
-    return generate_topic_quiz(level, week, subtopic)
-
-@app.post("/custom-assessment")
-def custom_assessment(topic: str):
-    return generate_custom_assessment(topic)
-"""
+# Define a simple error handling function for the LangGraph
+def _handle_errors(error_state):
+    """Handle errors in the workflow gracefully"""
+    error_message = error_state.get("error", "An unknown error occurred")
+    
+    # Log error for monitoring (would use proper logging in production)
+    print(f"Workflow error: {error_message}")
+    
+    # Create user-friendly error message
+    user_message = f"""I apologize, but I encountered an issue while processing your request.
+    
+    To help you continue learning:
+    1. Try refreshing the page
+    2. Rephrase your question if it was unclear
+    3. Break down complex requests into smaller steps
+    
+    If the issue persists, please contact support.
+    
+    Technical details: {error_message}
+    """
+    
+    return {"message": user_message, "success": False}
 
 # Example of LangGraph implementation (simplified)
 def create_workflow():
@@ -666,7 +678,7 @@ def create_workflow():
     except Exception as e:
         raise Exception(f"Failed to create agents: {str(e)}")
     
-    # Create state graph
+    # Create state graph with appropriate nodes
     workflow = StateGraph()
     
     # Add nodes with error handling
@@ -684,28 +696,31 @@ def create_workflow():
         # Add edges with conditions
         workflow.add_conditional_edges(
             "curriculum_agent",
+            _router_function,
             {
-                "assessment_agent": lambda x: "assessment" in x.lower() or "quiz" in x.lower(),
-                "error_handler": lambda x: "error" in x.lower(),
-                "curriculum_agent": lambda x: True  # Default path
+                "assessment_agent": "assessment",
+                "error_handler": "error",
+                "curriculum_agent": "curriculum"
             }
         )
         
         workflow.add_conditional_edges(
             "assessment_agent",
+            _router_function,
             {
-                "curriculum_agent": lambda x: "learn" in x.lower() or "topic" in x.lower(),
-                "error_handler": lambda x: "error" in x.lower(),
-                "assessment_agent": lambda x: True  # Default path
+                "curriculum_agent": "curriculum",
+                "error_handler": "error",
+                "assessment_agent": "assessment"
             }
         )
         
         # Error handler always returns to appropriate agent
         workflow.add_conditional_edges(
             "error_handler",
+            _router_function,
             {
-                "curriculum_agent": lambda x: "curriculum" in x.lower(),
-                "assessment_agent": lambda x: "assessment" in x.lower()
+                "curriculum_agent": "curriculum",
+                "assessment_agent": "assessment"
             }
         )
         
@@ -720,27 +735,16 @@ def create_workflow():
     except Exception as e:
         raise Exception(f"Failed to compile workflow: {str(e)}")
 
-def _handle_errors(error_state):
-    """Handle errors in the workflow gracefully"""
-    error_message = error_state.get("error", "An unknown error occurred")
+def _router_function(state):
+    """Function to route messages between agents"""
+    message = state.get("message", "").lower()
     
-    # Log error for monitoring (would use proper logging in production)
-    print(f"Workflow error: {error_message}")
-    
-    # Create user-friendly error message
-    user_message = f"""I apologize, but I encountered an issue while processing your request.
-    
-    To help you continue learning:
-    1. Try refreshing the page
-    2. Rephrase your question if it was unclear
-    3. Break down complex requests into smaller steps
-    
-    If the issue persists, please contact support.
-    
-    Technical details: {error_message}
-    """
-    
-    return {"message": user_message, "success": False}
+    if "assessment" in message or "quiz" in message:
+        return "assessment"
+    elif "error" in message:
+        return "error"
+    else:
+        return "curriculum"
 
 # For testing purposes
 if __name__ == "__main__":

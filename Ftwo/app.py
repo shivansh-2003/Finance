@@ -511,7 +511,7 @@ def render_sidebar():
                         st.session_state.current_week = item['week']
                         st.session_state.current_subtopic = None
                         st.session_state.quiz_state = None
-                        st.experimental_rerun()
+                        st.rerun()
         
         st.markdown("<div class='sidebar-heading'>TOOLS</div>", unsafe_allow_html=True)
         
@@ -521,7 +521,7 @@ def render_sidebar():
             st.session_state.current_week = None
             st.session_state.current_subtopic = None
             st.session_state.quiz_state = "custom"
-            st.experimental_rerun()
+            st.rerun()
         
         # Notes button
         if st.button("📝 My Notes", use_container_width=True):
@@ -529,7 +529,7 @@ def render_sidebar():
             st.session_state.current_week = None
             st.session_state.current_subtopic = None
             st.session_state.quiz_state = "notes"
-            st.experimental_rerun()
+            st.rerun()
         
         # Progress tracking
         st.markdown("<div class='sidebar-heading'>YOUR PROGRESS</div>", unsafe_allow_html=True)
@@ -658,8 +658,11 @@ def render_dashboard():
             if (level, week, subtopic) not in st.session_state.completed_topics:
                 incomplete_topics.append((level, week, subtopic, item['title']))
     
-    # Sort by level and week
-    incomplete_topics.sort()
+    # Filter out None values before sorting
+    incomplete_topics = [topic for topic in incomplete_topics if topic is not None]
+    
+    # Sort by level and week (assuming level and week are the first two elements of the tuple)
+    incomplete_topics.sort(key=lambda x: (x[0], x[1]))  # Sort by level and week
     
     # Display recommendations (first 3)
     if incomplete_topics:
@@ -679,7 +682,7 @@ def render_dashboard():
                         st.session_state.current_week = week
                         st.session_state.current_subtopic = subtopic
                         st.session_state.quiz_state = None
-                        st.experimental_rerun()
+                        st.rerun()
     else:
         st.success("Congratulations! You've completed all topics in the curriculum.")
     
@@ -745,7 +748,7 @@ def render_topic_content():
                 if st.button("Mark Complete", type="primary"):
                     st.session_state.completed_topics.add(complete_key)
                     st.success("Marked as complete!")
-                    st.experimental_rerun()
+                    st.rerun()
         
         # Subtopic navigation if no specific subtopic is selected
         if st.session_state.current_subtopic is None:
@@ -781,9 +784,9 @@ def render_topic_content():
                     """, unsafe_allow_html=True)
                     
                     # Hidden button that gets triggered by the onclick
-                    if st.button(f"Load {subtopic}", key=f"subtopic_button_{i}", label_visibility="collapsed"):
+                    if st.button(f"Load {subtopic}", key=f"subtopic_button_{i}"):
                         st.session_state.current_subtopic = subtopic
-                        st.experimental_rerun()
+                        st.rerun()
             
             st.markdown("</div>", unsafe_allow_html=True)
         else:
@@ -793,7 +796,7 @@ def render_topic_content():
             # Back button
             if st.button("← Back to main topic"):
                 st.session_state.current_subtopic = None
-                st.experimental_rerun()
+                st.rerun()
             
             # Display subtopic content
             content = get_topic_content_mock(
@@ -868,7 +871,7 @@ def render_topic_content():
             if st.button("Start Quiz", type="primary"):
                 st.session_state.quiz_state = "active"
                 st.session_state.quiz_subtopic = selected_subtopic
-                st.experimental_rerun()
+                st.rerun()
             
             st.markdown("</div>", unsafe_allow_html=True)
         
@@ -956,7 +959,7 @@ def render_topic_content():
                 
                 # Change state to results
                 st.session_state.quiz_state = "results"
-                st.experimental_rerun()
+                st.rerun()
             
             st.markdown("</div>", unsafe_allow_html=True)
         
@@ -1043,14 +1046,14 @@ def render_topic_content():
                     st.session_state.quiz_state = "active"
                     if 'user_answers' in st.session_state:
                         del st.session_state.user_answers
-                    st.experimental_rerun()
+                    st.rerun()
             
             with col2:
                 if st.button("Back to Topic", key="back_to_topic", type="secondary"):
                     st.session_state.quiz_state = None
                     if 'user_answers' in st.session_state:
                         del st.session_state.user_answers
-                    st.experimental_rerun()
+                    st.rerun()
             
             with col3:
                 # Get next topic
@@ -1076,7 +1079,7 @@ def render_topic_content():
                         st.session_state.quiz_state = None
                         if 'user_answers' in st.session_state:
                             del st.session_state.user_answers
-                        st.experimental_rerun()
+                        st.rerun()
             
             st.markdown("</div>", unsafe_allow_html=True)
         
@@ -1114,7 +1117,7 @@ def render_topic_content():
                     
                     with col2:
                         if st.button("Create Another Assessment"):
-                            st.experimental_rerun()
+                            st.rerun()
             
             st.markdown("</div>", unsafe_allow_html=True)
         
@@ -1144,7 +1147,7 @@ def render_topic_content():
                                     st.session_state.current_week = week
                                     st.session_state.current_subtopic = subtopic
                                     st.session_state.quiz_state = None
-                                    st.experimental_rerun()
+                                    st.rerun()
                 
                 with notes_tabs[1]:
                     # Organize by level
@@ -1169,7 +1172,7 @@ def render_topic_content():
                                             st.session_state.current_week = week
                                             st.session_state.current_subtopic = subtopic
                                             st.session_state.quiz_state = None
-                                            st.experimental_rerun()
+                                            st.rerun()
                 
                 with notes_tabs[2]:
                     # Search notes
@@ -1198,7 +1201,7 @@ def render_topic_content():
                                         st.session_state.current_week = week
                                         st.session_state.current_subtopic = subtopic
                                         st.session_state.quiz_state = None
-                                        st.experimental_rerun()
+                                        st.rerun()
                         
                         if not found_notes:
                             st.info(f"No notes found containing '{search_term}'")
