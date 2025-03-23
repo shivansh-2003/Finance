@@ -5,6 +5,7 @@ This file defines the complete structured roadmap for teaching personal finance
 from basics to advanced concepts. It's organized in modules of increasing difficulty.
 """
 
+
 # The curriculum is structured in 5 levels of difficulty
 # Level 1: Absolute Beginner
 # Level 2: Basic Understanding
@@ -350,6 +351,7 @@ CURRICULUM_ROADMAP = {
 
 # Function to get all modules in the curriculum
 def get_all_modules():
+    """Retrieve all modules from the curriculum roadmap."""
     modules = []
     for level, level_data in CURRICULUM_ROADMAP.items():
         for module in level_data["modules"]:
@@ -361,30 +363,34 @@ def get_all_modules():
 
 # Function to get modules by level
 def get_modules_by_level(level):
+    """Get modules for a specific level."""
     level_key = f"level_{level}"
     if level_key in CURRICULUM_ROADMAP:
         return CURRICULUM_ROADMAP[level_key]["modules"]
-    return []
+    return []  # Return an empty list if level not found
 
 # Function to get a specific module by ID
 def get_module_by_id(module_id):
+    """Retrieve a module by its ID."""
     for level, level_data in CURRICULUM_ROADMAP.items():
         for module in level_data["modules"]:
             if module["module_id"] == module_id:
                 return module
-    return None
+    return None  # Return None if module not found
 
 # Function to get the next recommended module after completing the current one
 def get_next_module(current_module_id):
+    """Get the next module after the current one."""
     all_modules = get_all_modules()
     for i, module in enumerate(all_modules):
         if module["module_id"] == current_module_id and i < len(all_modules) - 1:
             return all_modules[i + 1]
-    return None
+    return None  # Return None if no next module exists
 
 # Function to get assessment for a level
 def get_level_assessment(level):
+    """Retrieve the assessment for a specific level."""
     level_key = f"level_{level}"
     if level_key in CURRICULUM_ROADMAP:
         return CURRICULUM_ROADMAP[level_key]["assessment"]
-    return None 
+    return None  # Return None if level assessment not found 

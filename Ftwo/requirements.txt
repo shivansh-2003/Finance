@@ -1,0 +1,30 @@
+# Core dependencies
+langchain
+langchain-anthropic
+langchain-openai
+langchain-community
+anthropic
+openai
+langgraph
+# Vector database
+supabase
+psycopg2-binary
+pgvector
+
+# Internet search tool
+tavily-python
+
+# Frontend
+streamlit
+pandas
+matplotlib
+seaborn
+pillow
+
+# Utilities
+python-dotenv
+pydantic
+markdown
+requests
+typing-extensions
+langchainhub

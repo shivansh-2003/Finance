@@ -5,6 +5,20 @@ This module provides detailed, practical content for each module in the curricul
 including real-world examples, case studies, and interactive elements.
 """
 
+# Import necessary packages
+from typing import Dict, Any
+from supabase import create_client, Client
+from dotenv import load_dotenv
+import os
+from topic_recommendation import recommend_next_topic
+# Load environment variables
+load_dotenv()
+
+# Initialize Supabase client
+url: str = os.getenv("SUPABASE_URL")
+key: str = os.getenv("SUPABASE_KEY")
+supabase: Client = create_client(url, key)
+
 # Example content for Money Basics module
 MONEY_BASICS_CONTENT = {
     "key_concepts": {
@@ -147,4 +161,41 @@ def get_module_content(module_id: str) -> dict:
         "module_3_1": INVESTMENT_CONTENT,
         # Add more modules as they're developed
     }
-    return content_map.get(module_id, {}) 
+    return content_map.get(module_id, {})
+
+def get_user_progress(user_id: str) -> Dict[str, Any]:
+    """Get detailed user progress information."""
+    try:
+        response = supabase.table("user_progress").select("*").eq("user_id", user_id).execute()
+        
+        if response.data and len(response.data) > 0:
+            progress_data = response.data[0]
+            # Process and return the progress data as needed
+            return {
+                "completed_modules": progress_data.get("completed_modules", []),
+                "last_completed_module": progress_data.get("last_completed_module"),
+                "knowledge_level": progress_data.get("knowledge_level", 1),
+                "quiz_scores": progress_data.get("quiz_scores", {}),
+                "enhanced_modules": progress_data.get("enhanced_modules", []),
+                "next_recommended": recommend_next_topic(user_id)
+            }
+        else:
+            return {
+                "completed_modules": [],
+                "last_completed_module": None,
+                "knowledge_level": 1,
+                "quiz_scores": {},
+                "enhanced_modules": [],
+                "next_recommended": recommend_next_topic(user_id)
+            }
+        
+    except Exception as e:
+        print(f"Error fetching user progress: {e}")
+        return {
+            "completed_modules": [],
+            "last_completed_module": None,
+            "knowledge_level": 1,
+            "quiz_scores": {},
+            "enhanced_modules": [],
+            "next_recommended": recommend_next_topic(user_id)
+        } 

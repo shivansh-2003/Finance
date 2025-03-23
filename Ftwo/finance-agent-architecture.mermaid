@@ -1,0 +1,45 @@
+flowchart TD
+    User[User] <--> UI[Frontend Interface]
+    UI <--> API[API Layer]
+    API <--> AgentOrchestrator[Agent Orchestrator]
+    
+    subgraph "Knowledge Base"
+        SupabaseVectorDB[(Supabase Vector DB)]
+        TavilyAPI[Tavily API]
+    end
+    
+    subgraph "LLM"
+        Claude[Claude 3.7 Sonnet]
+    end
+    
+    subgraph "Agent Components"
+        CurriculumAgent[Curriculum Agent]
+        AssessmentAgent[Assessment Agent]
+        RetrievalSystem[Knowledge Retrieval System]
+    end
+    
+    AgentOrchestrator --> CurriculumAgent
+    AgentOrchestrator --> AssessmentAgent
+    AgentOrchestrator --> RetrievalSystem
+    
+    CurriculumAgent <--> Claude
+    AssessmentAgent <--> Claude
+    RetrievalSystem <--> Claude
+    
+    RetrievalSystem <--> SupabaseVectorDB
+    RetrievalSystem <--> TavilyAPI
+    
+    CurriculumAgent --> RetrievalSystem
+    AssessmentAgent --> RetrievalSystem
+    
+    subgraph "LangChain Components"
+        vectorStore[Vector Store Integration]
+        embeddingModel[OpenAI Embeddings]
+        retrievalQA[Retrieval QA Chains]
+        langGraph[LangGraph Workflow]
+    end
+    
+    RetrievalSystem --> vectorStore
+    vectorStore --> embeddingModel
+    RetrievalSystem --> retrievalQA
+    AgentOrchestrator --> langGraph

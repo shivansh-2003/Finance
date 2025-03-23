@@ -1,10 +1,3 @@
-"""
-PERSONAL FINANCE TEACHING ASSISTANT - STREAMLIT FRONTEND
-
-A standalone Streamlit application that directly integrates with the RAG system
-and curriculum for teaching personal finance.
-"""
-
 import os
 import json
 import streamlit as st
