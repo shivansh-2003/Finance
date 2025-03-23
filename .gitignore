@@ -2,3 +2,4 @@ venv/
 .env
 sources.txt
 documents/
+Finace_edu/__pycache__/

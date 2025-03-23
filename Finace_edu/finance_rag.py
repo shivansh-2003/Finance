@@ -1,8 +1,7 @@
 """
 FINANCE EDUCATION RAG IMPLEMENTATION
 
-This module implements the Retrieval Augmented Generation (RAG) pipeline
-for the personal finance teaching assistant.
+Optimized for efficient document retrieval from Supabase vector store
 """
 
 import os
@@ -13,15 +12,15 @@ from dotenv import load_dotenv
 from langchain_openai import OpenAIEmbeddings, ChatOpenAI
 from langchain_community.vectorstores import SupabaseVectorStore
 from langchain_core.output_parsers import StrOutputParser
-from langchain_core.prompts import PromptTemplate
+from langchain_core.prompts import PromptTemplate, ChatPromptTemplate
 from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain.chains import RetrievalQA
 
 # Supabase
 from supabase.client import Client, create_client
 
-# Import the curriculum roadmap
+# Import the curriculum content and roadmap
 from curriculum_roadmap import get_module_by_id, get_next_module, get_level_assessment
+from curriculum_content import get_module_content
 
 # Load environment variables
 load_dotenv()
@@ -43,326 +42,367 @@ vector_store = SupabaseVectorStore(
 )
 
 # Initialize LLM with a temperature appropriate for teaching
-llm = ChatOpenAI(model="claude-3-7-sonnet-20240229", temperature=0.2)
+llm = ChatOpenAI(model="gpt-4-turbo-preview", temperature=0.2)
 
-def retrieve_teaching_content(query: str, user_id: Optional[str] = None, module_id: Optional[str] = None) -> str:
+def retrieve_teaching_content(
+    query: str, 
+    user_id: Optional[str] = None, 
+    module_id: Optional[str] = None, 
+    k: int = 3
+) -> str:
     """
-    Retrieve educational content relevant to a user query.
-    
-    Args:
-        query: User's question or topic
-        user_id: Optional user ID to personalize results
-        module_id: Optional module ID to filter content
-    
-    Returns:
-        Relevant educational content as a string
+    Retrieve educational content relevant to a user query from Supabase vector store
+    and enhance it with practical examples and case studies.
     """
+    # Get user level and module content
+    user_level = get_user_level(user_id) if user_id else 1
+    module_content = get_module_content(module_id) if module_id else {}
+    
     # Create metadata filters if module ID is provided
     metadata_filters = {}
     if module_id:
-        module = get_module_by_id(module_id)
-        if module:
-            metadata_filters = {"module_id": module_id}
+        metadata_filters = {"module_id": module_id}
     
-    # Get user level if user_id is provided
-    user_level = get_user_level(user_id) if user_id else 1
-    
-    # Create search query enhancer
-    enhancer_prompt = PromptTemplate.from_template(
-        """You are helping a personal finance teaching system retrieve educational content.
+    # Enhance query for better retrieval
+    enhanced_query_prompt = PromptTemplate.from_template(
+        """Enhance this query to improve retrieval of personal finance educational content:
         
-        User query: {query}
+        Original Query: {query}
+        User's Knowledge Level: {level}
+        Current Module: {module_id}
         
-        Your task is to enhance this query to improve retrieval of personal finance educational content.
-        Add relevant financial terms and concepts related to the query.
-        If the query is vague, make it more specific to personal finance education.
-        The user's knowledge level is {level} (1-5, where 1 is beginner and 5 is expert).
-        
-        Enhanced query:"""
+        Add relevant financial terms and provide context to help retrieve the most appropriate content.
+        Enhanced Query:"""
     )
     
-    enhancer_chain = enhancer_prompt | llm | StrOutputParser()
-    enhanced_query = enhancer_chain.invoke({"query": query, "level": user_level})
+    enhanced_query_chain = enhanced_query_prompt | llm | StrOutputParser()
+    enhanced_query = enhanced_query_chain.invoke({
+        "query": query, 
+        "level": user_level,
+        "module_id": module_id or "Not specified"
+    })
     
-    # Retrieve documents
-    retriever = vector_store.as_retriever(
-        search_type="similarity",
-        search_kwargs={"k": 3, "filter": metadata_filters}
+    try:
+        # Retrieve documents from vector store
+        retriever = vector_store.as_retriever(
+            search_type="similarity",
+            search_kwargs={
+                "k": k, 
+                "filter": metadata_filters
+            }
+        )
+        
+        docs = retriever.get_relevant_documents(enhanced_query)
+        
+        if not docs:
+            # Fallback to module content if available
+            if module_content:
+                return format_module_content(module_content, query, user_level)
+            return "I couldn't find specific information about this topic. Could you rephrase or be more specific?"
+        
+        # Combine retrieved documents with module content
+        content_parts = []
+        
+        # Add relevant module content if available
+        if module_content:
+            relevant_content = extract_relevant_module_content(module_content, query)
+            if relevant_content:
+                content_parts.append(relevant_content)
+        
+        # Add retrieved documents
+        for doc in docs:
+            source_info = f"Source: {doc.metadata.get('title', 'Unknown Source')}"
+            if "module_id" in doc.metadata:
+                source_info += f" - Module: {doc.metadata.get('module_id')}"
+            if "section" in doc.metadata:
+                source_info += f" - Section: {doc.metadata.get('section')}"
+            
+            content_parts.append(f"{source_info}\n\n{doc.page_content}")
+        
+        # Combine and format the content
+        combined_content = "\n\n---\n\n".join(content_parts)
+        
+        # Generate a final, coherent response
+        response_prompt = ChatPromptTemplate.from_template(
+            """Based on the following content, provide a comprehensive answer to the user's question.
+            Make sure to include practical examples and real-world applications where relevant.
+            
+            User's Question: {query}
+            User's Knowledge Level: {level}
+            
+            Content:
+            {content}
+            
+            Provide a clear, structured response that:
+            1. Directly answers the question
+            2. Includes practical examples
+            3. Offers actionable advice
+            4. Is appropriate for the user's knowledge level
+            """
+        )
+        
+        response_chain = response_prompt | llm | StrOutputParser()
+        return response_chain.invoke({
+            "query": query,
+            "level": user_level,
+            "content": combined_content
+        })
+    
+    except Exception as e:
+        print(f"Error retrieving documents: {e}")
+        return "I encountered an error while searching for information. Please try again."
+
+def extract_relevant_module_content(module_content: dict, query: str) -> str:
+    """Extract relevant content from a module based on the query."""
+    relevant_parts = []
+    
+    # Extract key concepts
+    if "key_concepts" in module_content:
+        for concept, details in module_content["key_concepts"].items():
+            if any(term in query.lower() for term in concept.lower().split('_')):
+                relevant_parts.append(
+                    f"Key Concept: {concept.replace('_', ' ').title()}\n"
+                    f"Explanation: {details['explanation']}\n"
+                    f"Real-world Example: {details['real_world_example']}\n"
+                    f"Practice: {details['practical_exercise']}"
+                )
+    
+    # Extract relevant case studies
+    if "case_studies" in module_content:
+        for case in module_content["case_studies"]:
+            relevant_parts.append(
+                f"Case Study: {case['title']}\n"
+                f"Scenario: {case['scenario']}"
+            )
+    
+    return "\n\n".join(relevant_parts) if relevant_parts else ""
+
+def format_module_content(module_content: dict, query: str, user_level: int) -> str:
+    """Format module content into a coherent response."""
+    # Extract relevant content
+    relevant_content = extract_relevant_module_content(module_content, query)
+    
+    if not relevant_content:
+        return "I couldn't find specific information about this topic in the current module."
+    
+    # Generate a response using the content
+    response_prompt = ChatPromptTemplate.from_template(
+        """Create a comprehensive response using this educational content:
+        
+        {content}
+        
+        The response should be:
+        1. Appropriate for knowledge level {level}
+        2. Include practical examples and exercises
+        3. Provide clear, actionable advice
+        4. Connect concepts to real-world situations
+        
+        Response:"""
     )
     
-    docs = retriever.get_relevant_documents(enhanced_query)
+    response_chain = response_prompt | llm | StrOutputParser()
+    return response_chain.invoke({
+        "content": relevant_content,
+        "level": user_level
+    })
+
+def get_user_level(user_id: Optional[str]) -> int:
+    """Get the user's knowledge level from their profile."""
+    if not user_id:
+        return 1
     
-    # Process the retrieved documents
-    content_parts = []
-    for doc in docs:
-        # Add metadata information about the source
-        source_info = f"Source: {doc.metadata.get('title', 'Unknown Source')}"
-        if "module_id" in doc.metadata:
-            source_info += f" - Module: {doc.metadata.get('module_id')}"
-        if "section" in doc.metadata:
-            source_info += f" - Section: {doc.metadata.get('section')}"
-        
-        # Add the content with its source
-        content_parts.append(f"{source_info}\n\n{doc.page_content}")
-    
-    # If no results, return a fallback message
-    if not content_parts:
-        return "I don't have specific curriculum content on this topic yet. Here's some general guidance based on financial best practices."
-    
-    # Join all content parts
-    return "\n\n---\n\n".join(content_parts)
+    try:
+        response = supabase.table("user_progress").select("knowledge_level").eq("user_id", user_id).execute()
+        if response.data and len(response.data) > 0:
+            return response.data[0].get("knowledge_level", 1)
+        return 1
+    except Exception as e:
+        print(f"Error fetching user level: {e}")
+        return 1
 
 def explain_financial_term(term: str, user_level: int = 1) -> str:
-    """
-    Get an explanation for a financial term, adjusted for the user's level.
+    """Get an explanation for a financial term with practical examples."""
+    query = f"Definition and explanation of {term} financial term"
     
-    Args:
-        term: The financial term to explain
-        user_level: User's knowledge level (1-5)
-    
-    Returns:
-        An explanation of the term
-    """
-    # First try to get the term from our vector store
-    query = f"Define and explain the financial term: {term}"
-    
-    # Determine the appropriate level of explanation
-    level_desc = "beginner"
-    if user_level > 3:
-        level_desc = "advanced"
-    elif user_level > 1:
-        level_desc = "intermediate"
-    
-    # Enhanced query for better retrieval
-    enhanced_query = f"Definition explanation {term} financial term {level_desc} level"
-    
-    # Retrieve definition
-    retriever = vector_store.as_retriever(search_type="similarity", search_kwargs={"k": 2})
-    docs = retriever.get_relevant_documents(enhanced_query)
-    
-    # If we have results from the vector store, process them
-    if docs:
+    try:
+        # Check if term exists in module content
+        for module_id in ["module_1_1", "module_1_2", "module_3_1"]:  # Add more as needed
+            module_content = get_module_content(module_id)
+            if module_content:
+                for concept, details in module_content.get("key_concepts", {}).items():
+                    if term.lower() in concept.lower():
+                        return f"{details['explanation']}\n\nReal-world Example: {details['real_world_example']}"
+        
+        # Fallback to vector store
+        docs = vector_store.similarity_search(query, k=2)
+        
+        if not docs:
+            explanation_prompt = ChatPromptTemplate.from_template(
+                """Explain the financial term '{term}' to someone at knowledge level {level}.
+                
+                Provide a clear, concise explanation that:
+                1. Starts with a simple definition
+                2. Explains why this term is important
+                3. Gives a real-world example
+                4. Is appropriate for a level {level} learner
+                """
+            )
+            
+            chain = explanation_prompt | llm | StrOutputParser()
+            return chain.invoke({"term": term, "level": user_level})
+        
+        # Process retrieved documents
         content_parts = [doc.page_content for doc in docs]
         retrieved_content = "\n\n".join(content_parts)
         
-        # Format the explanation using the LLM to make it appropriate for the user level
-        prompt = PromptTemplate.from_template(
-            """You are explaining the financial term '{term}' to someone at knowledge level {level} (1-5).
+        # Format the explanation
+        explanation_prompt = ChatPromptTemplate.from_template(
+            """Explain the financial term '{term}' based on this retrieved information:
             
-            Retrieved information about this term:
             {content}
             
-            Create a clear, concise explanation that:
-            1. Starts with a 1-sentence simple definition
-            2. Expands with details appropriate for level {level}
-            3. Includes any key points from the retrieved information
-            4. Uses examples where helpful
-            
-            If the retrieved information is not relevant, create an accurate explanation based on your own knowledge.
-            
-            Keep your tone friendly and educational without being condescending.
-            The explanation should be no more than 3-4 paragraphs.
+            Create an explanation that:
+            1. Is clear and understandable
+            2. Matches the knowledge level of {level}
+            3. Includes key points from the retrieved information
+            4. Provides practical context
             """
         )
         
-        chain = prompt | llm | StrOutputParser()
+        chain = explanation_prompt | llm | StrOutputParser()
         return chain.invoke({
-            "term": term,
-            "level": user_level,
-            "content": retrieved_content
+            "term": term, 
+            "content": retrieved_content, 
+            "level": user_level
         })
     
-    # Fallback to generating a explanation with the LLM if no content found
-    prompt = PromptTemplate.from_template(
-        """You are a personal finance educator. Explain the financial term '{term}' to a {level_desc} level student.
-        
-        Your explanation should:
-        1. Start with a clear, concise definition
-        2. Explain why this term is important in personal finance
-        3. Give an example of how it applies in real life
-        4. Be appropriate for a {level_desc} level understanding
-        
-        Keep your explanation accurate, educational and concise (3-4 paragraphs maximum).
-        """
-    )
-    
-    chain = prompt | llm | StrOutputParser()
-    return chain.invoke({
-        "term": term,
-        "level_desc": level_desc
-    })
+    except Exception as e:
+        print(f"Error explaining financial term: {e}")
+        return f"I couldn't find a detailed explanation for '{term}'. Please try another term."
 
 def get_practical_examples(concept: str, difficulty: str = "beginner") -> str:
-    """
-    Get practical examples for a financial concept.
+    """Get practical examples for a financial concept."""
+    # First, check module content for examples
+    for module_id in ["module_1_1", "module_1_2", "module_3_1"]:  # Add more as needed
+        module_content = get_module_content(module_id)
+        if module_content:
+            for concept_name, details in module_content.get("key_concepts", {}).items():
+                if concept.lower() in concept_name.lower():
+                    return f"{details['real_world_example']}\n\nPractical Exercise: {details['practical_exercise']}"
     
-    Args:
-        concept: The financial concept
-        difficulty: Difficulty level (beginner, intermediate, advanced)
+    # Fallback to vector store
+    query = f"Practical examples of {concept} in {difficulty} personal finance"
     
-    Returns:
-        Practical examples as a string
-    """
-    # Try to retrieve examples from the vector store
-    query = f"practical examples {concept} {difficulty} personal finance"
-    
-    retriever = vector_store.as_retriever(search_type="similarity", search_kwargs={"k": 2})
-    docs = retriever.get_relevant_documents(query)
-    
-    # If we have results from the vector store, process them
-    if docs:
+    try:
+        docs = vector_store.similarity_search(query, k=2)
+        
+        if not docs:
+            examples_prompt = ChatPromptTemplate.from_template(
+                """Generate practical examples for the financial concept '{concept}' 
+                at a {difficulty} level.
+                
+                Create 2-3 clear, realistic scenarios that:
+                1. Illustrate the concept in action
+                2. Are appropriate for a {difficulty} level understanding
+                3. Include specific, relatable details
+                4. Show the practical implications of the concept
+                """
+            )
+            
+            chain = examples_prompt | llm | StrOutputParser()
+            return chain.invoke({"concept": concept, "difficulty": difficulty})
+        
         content_parts = [doc.page_content for doc in docs]
         retrieved_content = "\n\n".join(content_parts)
         
-        # Format the examples using the LLM
-        prompt = PromptTemplate.from_template(
-            """You are providing practical examples of '{concept}' at a {difficulty} level.
+        examples_prompt = ChatPromptTemplate.from_template(
+            """Create practical examples for '{concept}' based on this retrieved information:
             
-            Retrieved information:
             {content}
             
-            Create 2-3 clear, practical examples that:
-            1. Illustrate how {concept} applies in real-life financial situations
-            2. Are appropriate for {difficulty} level understanding
-            3. Include specific numbers and scenarios
-            4. Highlight the key principles in action
-            
-            If the retrieved information doesn't contain good examples, create your own accurate examples.
-            
-            Format as a numbered list of examples, each with a brief scenario and explanation.
+            Generate 2-3 examples that:
+            1. Are clear and illustrative
+            2. Match the {difficulty} level of understanding
+            3. Incorporate key points from the retrieved content
+            4. Provide actionable insights
             """
         )
         
-        chain = prompt | llm | StrOutputParser()
+        chain = examples_prompt | llm | StrOutputParser()
         return chain.invoke({
-            "concept": concept,
-            "difficulty": difficulty,
-            "content": retrieved_content
+            "concept": concept, 
+            "content": retrieved_content, 
+            "difficulty": difficulty
         })
     
-    # Fallback to generating examples with the LLM if no content found
-    prompt = PromptTemplate.from_template(
-        """You are a personal finance educator. Provide 2-3 practical examples of '{concept}' for a {difficulty} level student.
-        
-        Each example should:
-        1. Be a realistic scenario involving {concept}
-        2. Include specific numbers and calculations if relevant
-        3. Show the practical application in everyday life
-        4. Highlight why this concept matters
-        
-        Format as a numbered list. Make your examples clear, practical, and appropriate for {difficulty} level understanding.
-        """
-    )
-    
-    chain = prompt | llm | StrOutputParser()
-    return chain.invoke({
-        "concept": concept,
-        "difficulty": difficulty
-    })
+    except Exception as e:
+        print(f"Error retrieving practical examples: {e}")
+        return f"I couldn't find specific examples for '{concept}'. Let me provide a general explanation."
 
 def recommend_next_topic(user_id: str) -> Dict[str, Any]:
-    """
-    Recommend what to study next based on user's progress.
-    
-    Args:
-        user_id: The user's ID
-    
-    Returns:
-        Dictionary with recommendation details
-    """
-    # Get user's progress data
+    """Recommend what to study next based on user's progress and interests."""
     user_progress = get_user_progress(user_id)
-    user_level = get_user_level(user_id)
+    user_level = user_progress.get("knowledge_level", 1)
+    completed_modules = user_progress.get("completed_modules", [])
     
-    # If user has completed modules, recommend the next one
-    last_completed_module = user_progress.get("last_completed_module")
-    if last_completed_module:
-        next_module = get_next_module(last_completed_module)
+    # Get next module in sequence if user has completed modules
+    if completed_modules:
+        last_completed = completed_modules[-1]
+        next_module = get_next_module(last_completed)
         if next_module:
+            module_content = get_module_content(next_module["module_id"])
             return {
-                "module_id": next_module["module_id"],
-                "title": next_module["title"],
-                "description": next_module["description"],
-                "topics": next_module["topics"],
-                "reason": "This is the next module in the curriculum sequence."
+                **next_module,
+                "content_preview": module_content,
+                "reason": "This module builds on your previous learning and introduces new concepts."
             }
     
-    # If no completed modules or next module not found, recommend starting point
-    # based on user's knowledge level
-    level = max(1, min(5, user_level))
-    modules = get_modules_by_level(level)
-    
-    if modules:
-        # Recommend the first module of the appropriate level
-        module = modules[0]
-        return {
-            "module_id": module["module_id"],
-            "title": module["title"],
-            "description": module["description"],
-            "topics": module["topics"],
-            "reason": f"This module is appropriate for your current knowledge level ({level}/5)."
-        }
-    
-    # Fallback recommendation
-    return {
+    # For new users or if no clear next module
+    starter_module = {
         "module_id": "module_1_1",
         "title": "Money Basics",
         "description": "Understanding the fundamental concepts of money and personal finance",
-        "topics": ["What is money and its functions", "Income vs. expenses", "Financial goals and values", "Basic financial terminology"],
-        "reason": "It's best to start with the fundamentals of personal finance."
+        "content_preview": get_module_content("module_1_1"),
+        "reason": "This module provides essential foundations for personal finance understanding."
     }
-
-def get_user_level(user_id: Optional[str]) -> int:
-    """
-    Get the user's knowledge level from their profile.
     
-    Args:
-        user_id: The user's ID
-    
-    Returns:
-        Knowledge level (1-5)
-    """
-    if not user_id:
-        return 1  # Default to beginner level
-    
-    try:
-        # Fetch user progress data from Supabase
-        response = supabase.table("user_progress").select("knowledge_level").eq("user_id", user_id).execute()
-        
-        # Check if we got results
-        if response.data and len(response.data) > 0:
-            return response.data[0].get("knowledge_level", 1)
-        
-        return 1  # Default to beginner if user not found
-        
-    except Exception as e:
-        print(f"Error fetching user level: {e}")
-        return 1  # Default to beginner level on error
+    return starter_module
 
 def get_user_progress(user_id: str) -> Dict[str, Any]:
-    """
-    Get a user's learning progress details.
-    
-    Args:
-        user_id: The user's ID
-    
-    Returns:
-        Dictionary with user progress details
-    """
+    """Get detailed user progress information."""
     try:
-        # Fetch user progress data
         response = supabase.table("user_progress").select("*").eq("user_id", user_id).execute()
         
-        # Check if we got results
         if response.data and len(response.data) > 0:
-            return response.data[0]
+            progress_data = response.data[0]
+            
+            # Enhance progress data with module details
+            completed_modules = progress_data.get("completed_modules", [])
+            enhanced_modules = []
+            
+            for module_id in completed_modules:
+                module = get_module_by_id(module_id)
+                if module:
+                    module_content = get_module_content(module_id)
+                    enhanced_modules.append({
+                        **module,
+                        "completion_date": progress_data.get("completion_dates", {}).get(module_id),
+                        "key_concepts": list(module_content.get("key_concepts", {}).keys())
+                    })
+            
+            return {
+                **progress_data,
+                "enhanced_modules": enhanced_modules,
+                "next_recommended": recommend_next_topic(user_id)
+            }
         
-        # Default empty progress
         return {
             "completed_modules": [],
             "last_completed_module": None,
             "knowledge_level": 1,
-            "quiz_scores": {}
+            "quiz_scores": {},
+            "enhanced_modules": [],
+            "next_recommended": recommend_next_topic(user_id)
         }
         
     except Exception as e:
@@ -371,7 +411,9 @@ def get_user_progress(user_id: str) -> Dict[str, Any]:
             "completed_modules": [],
             "last_completed_module": None,
             "knowledge_level": 1,
-            "quiz_scores": {}
+            "quiz_scores": {},
+            "enhanced_modules": [],
+            "next_recommended": recommend_next_topic(user_id)
         }
 
 def update_user_progress(user_id: str, module_id: Optional[str] = None, 
