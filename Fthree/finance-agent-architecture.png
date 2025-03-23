@@ -1,0 +1,98 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 680">
+  <!-- Background -->
+  <rect width="1000" height="680" fill="#f8f9fa" rx="10" ry="10" />
+  
+  <!-- Title -->
+  <text x="500" y="40" font-family="Arial, sans-serif" font-size="24" font-weight="bold" text-anchor="middle" fill="#2c3e50">Ultimate Finance Agent Architecture</text>
+  
+  <!-- User Interaction Layer -->
+  <rect x="50" y="70" width="900" height="80" rx="10" ry="10" fill="#3498db" opacity="0.8" />
+  <text x="500" y="110" font-family="Arial, sans-serif" font-size="20" font-weight="bold" text-anchor="middle" fill="white">User Interaction Layer</text>
+  <text x="500" y="135" font-family="Arial, sans-serif" font-size="14" text-anchor="middle" fill="white">CLI/Web Interface/API Endpoints</text>
+  
+  <!-- Core Modules -->
+  <rect x="50" y="170" width="900" height="70" rx="10" ry="10" fill="#2c3e50" opacity="0.8" />
+  <text x="500" y="210" font-family="Arial, sans-serif" font-size="20" font-weight="bold" text-anchor="middle" fill="white">Orchestration Layer (Agent Router)</text>
+
+  <!-- Three Main Modules -->
+  <!-- Personal Finance Module -->
+  <rect x="70" y="260" width="280" height="250" rx="10" ry="10" fill="#e74c3c" opacity="0.7" />
+  <text x="210" y="290" font-family="Arial, sans-serif" font-size="18" font-weight="bold" text-anchor="middle" fill="white">Personal Finance Advisor</text>
+  <rect x="90" y="310" width="240" height="180" rx="5" ry="5" fill="white" opacity="0.9" />
+  <text x="210" y="335" font-family="Arial, sans-serif" font-size="14" font-weight="bold" text-anchor="middle" fill="#2c3e50">Components:</text>
+  <text x="210" y="365" font-family="Arial, sans-serif" font-size="12" text-anchor="middle" fill="#2c3e50">• Situation Analysis Agent</text>
+  <text x="210" y="390" font-family="Arial, sans-serif" font-size="12" text-anchor="middle" fill="#2c3e50">• Budget Optimization Agent</text>
+  <text x="210" y="415" font-family="Arial, sans-serif" font-size="12" text-anchor="middle" fill="#2c3e50">• Investment Recommendation Agent</text>
+  <text x="210" y="440" font-family="Arial, sans-serif" font-size="12" text-anchor="middle" fill="#2c3e50">• Risk Assessment Agent</text>
+  <text x="210" y="465" font-family="Arial, sans-serif" font-size="12" text-anchor="middle" fill="#2c3e50">• Tax Planning Agent</text>
+  
+  <!-- Document Analysis Module -->
+  <rect x="360" y="260" width="280" height="250" rx="10" ry="10" fill="#2ecc71" opacity="0.7" />
+  <text x="500" y="290" font-family="Arial, sans-serif" font-size="18" font-weight="bold" text-anchor="middle" fill="white">Financial Document Analyzer</text>
+  <rect x="380" y="310" width="240" height="180" rx="5" ry="5" fill="white" opacity="0.9" />
+  <text x="500" y="335" font-family="Arial, sans-serif" font-size="14" font-weight="bold" text-anchor="middle" fill="#2c3e50">Components:</text>
+  <text x="500" y="365" font-family="Arial, sans-serif" font-size="12" text-anchor="middle" fill="#2c3e50">• Document Ingestion Pipeline</text>
+  <text x="500" y="390" font-family="Arial, sans-serif" font-size="12" text-anchor="middle" fill="#2c3e50">• Vector Database (Embeddings)</text>
+  <text x="500" y="415" font-family="Arial, sans-serif" font-size="12" text-anchor="middle" fill="#2c3e50">• RAG Query Engine</text>
+  <text x="500" y="440" font-family="Arial, sans-serif" font-size="12" text-anchor="middle" fill="#2c3e50">• Document Summary Agent</text>
+  <text x="500" y="465" font-family="Arial, sans-serif" font-size="12" text-anchor="middle" fill="#2c3e50">• Key Insights Extractor</text>
+  
+  <!-- Stock Market Analysis Module -->
+  <rect x="650" y="260" width="280" height="250" rx="10" ry="10" fill="#9b59b6" opacity="0.7" />
+  <text x="790" y="290" font-family="Arial, sans-serif" font-size="18" font-weight="bold" text-anchor="middle" fill="white">Stock Market Analyzer</text>
+  <rect x="670" y="310" width="240" height="180" rx="5" ry="5" fill="white" opacity="0.9" />
+  <text x="790" y="335" font-family="Arial, sans-serif" font-size="14" font-weight="bold" text-anchor="middle" fill="#2c3e50">Components:</text>
+  <text x="790" y="365" font-family="Arial, sans-serif" font-size="12" text-anchor="middle" fill="#2c3e50">• Market Data Collector</text>
+  <text x="790" y="390" font-family="Arial, sans-serif" font-size="12" text-anchor="middle" fill="#2c3e50">• Technical Analysis Agent</text>
+  <text x="790" y="415" font-family="Arial, sans-serif" font-size="12" text-anchor="middle" fill="#2c3e50">• Fundamental Analysis Agent</text>
+  <text x="790" y="440" font-family="Arial, sans-serif" font-size="12" text-anchor="middle" fill="#2c3e50">• News Sentiment Analyzer</text>
+  <text x="790" y="465" font-family="Arial, sans-serif" font-size="12" text-anchor="middle" fill="#2c3e50">• Comparative Analysis Agent</text>
+  
+  <!-- Data Sources Layer -->
+  <rect x="50" y="530" width="900" height="100" rx="10" ry="10" fill="#f39c12" opacity="0.7" />
+  <text x="500" y="555" font-family="Arial, sans-serif" font-size="18" font-weight="bold" text-anchor="middle" fill="white">Data Sources Layer</text>
+  <rect x="70" y="575" width="280" height="40" rx="5" ry="5" fill="white" opacity="0.9" />
+  <text x="210" y="600" font-family="Arial, sans-serif" font-size="14" font-weight="bold" text-anchor="middle" fill="#2c3e50">Personal Finance Data</text>
+  
+  <rect x="360" y="575" width="280" height="40" rx="5" ry="5" fill="white" opacity="0.9" />
+  <text x="500" y="600" font-family="Arial, sans-serif" font-size="14" font-weight="bold" text-anchor="middle" fill="#2c3e50">Financial Documents & PDFs</text>
+  
+  <rect x="650" y="575" width="280" height="40" rx="5" ry="5" fill="white" opacity="0.9" />
+  <text x="790" y="600" font-family="Arial, sans-serif" font-size="14" font-weight="bold" text-anchor="middle" fill="#2c3e50">Market Data APIs</text>
+  
+  <!-- Connection Lines -->
+  <!-- User to Router -->
+  <line x1="500" y1="150" x2="500" y2="170" stroke="#2c3e50" stroke-width="2" />
+  
+  <!-- Router to Modules -->
+  <line x1="210" y1="240" x2="210" y2="260" stroke="#2c3e50" stroke-width="2" />
+  <line x1="500" y1="240" x2="500" y2="260" stroke="#2c3e50" stroke-width="2" />
+  <line x1="790" y1="240" x2="790" y2="260" stroke="#2c3e50" stroke-width="2" />
+  
+  <!-- Modules to Data Sources -->
+  <line x1="210" y1="510" x2="210" y2="575" stroke="#2c3e50" stroke-width="2" />
+  <line x1="500" y1="510" x2="500" y2="575" stroke="#2c3e50" stroke-width="2" />
+  <line x1="790" y1="510" x2="790" y2="575" stroke="#2c3e50" stroke-width="2" />
+
+  <!-- Legend -->
+  <rect x="50" y="640" width="15" height="15" fill="#3498db" opacity="0.8" />
+  <text x="75" y="653" font-family="Arial, sans-serif" font-size="12" fill="#2c3e50">User Interface</text>
+  
+  <rect x="180" y="640" width="15" height="15" fill="#2c3e50" opacity="0.8" />
+  <text x="205" y="653" font-family="Arial, sans-serif" font-size="12" fill="#2c3e50">Orchestration</text>
+  
+  <rect x="310" y="640" width="15" height="15" fill="#e74c3c" opacity="0.7" />
+  <text x="335" y="653" font-family="Arial, sans-serif" font-size="12" fill="#2c3e50">Personal Finance</text>
+  
+  <rect x="440" y="640" width="15" height="15" fill="#2ecc71" opacity="0.7" />
+  <text x="465" y="653" font-family="Arial, sans-serif" font-size="12" fill="#2c3e50">Document Analysis</text>
+  
+  <rect x="580" y="640" width="15" height="15" fill="#9b59b6" opacity="0.7" />
+  <text x="605" y="653" font-family="Arial, sans-serif" font-size="12" fill="#2c3e50">Stock Analysis</text>
+  
+  <rect x="700" y="640" width="15" height="15" fill="#f39c12" opacity="0.7" />
+  <text x="725" y="653" font-family="Arial, sans-serif" font-size="12" fill="#2c3e50">Data Sources</text>
+
+  <!-- Technology Stack -->
+  <text x="850" y="653" font-family="Arial, sans-serif" font-size="12" font-style="italic" fill="#7f8c8d">Tech Stack: LangChain, LangGraph, AGNO, FinRobot</text>
+</svg>
